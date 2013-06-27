@@ -1,5 +1,6 @@
 <?php
 require_once 'AppDotNet.php';
+require_once 'config.php';
 
 if (array_key_exists('token', $_GET)
    || array_key_exists('user', $_GET)
@@ -11,8 +12,6 @@ if (array_key_exists('token', $_GET)
 }
 
 function printRss() {
-  $clientId     = 'GM9pHynSwfmNhqZAbVumyTYGXkxSC2KK';
-  $clientSecret = 'ygK4wdK9A8gq9RjzAfVBRhfQqc5sC24f';
   $app = new AppDotNet($clientId,$clientSecret);
 
   if (array_key_exists('token', $_GET)) {

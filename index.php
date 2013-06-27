@@ -1,8 +1,7 @@
 <?php
 require_once 'AppDotNet.php';
+require_once 'config.php';
 
-$clientId     = 'GM9pHynSwfmNhqZAbVumyTYGXkxSC2KK';
-$clientSecret = 'ygK4wdK9A8gq9RjzAfVBRhfQqc5sC24f';
 $redirectUri  = 'http://jonathonduerig.com/my-rss-stream/complete.php';
 $scope        =  array('stream');
 
