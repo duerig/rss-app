@@ -28,6 +28,10 @@ function printRss() {
   if (array_key_exists('directed', $_GET)) {
     $directed = intval($_GET['directed']);
   }  
+  $expandlinks = 0;
+  if (array_key_exists('expandlinks', $_GET)) {
+    $expandlinks = intval($_GET['expandlinks']);
+  }  
   header('Content-Type: application/rss+xml');
   echo '<?xml version="1.0" encoding="utf-8"?>';
   echo '<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#" xmlns:georss="http://www.georss.org/georss" version="2.0">';
@@ -72,7 +76,11 @@ function printRss() {
     if ($replies == 1 || ! array_key_exists('reply_to', $post)) {
       $username = htmlspecialchars($post['user']['username']);
       $text = htmlspecialchars($post['text']);
-      $html = htmlspecialchars($post['html']);
+      if ($expandlinks == 1) {
+        $html = htmlspecialchars(expandLinks($post['html']));
+      } else {
+        $html = htmlspecialchars($post['html']);
+      }
       $date = htmlspecialchars(gmdate(DATE_RSS,
                                       strtotime($post['created_at'])));
       $link = htmlspecialchars($post['canonical_url']);
@@ -103,4 +111,37 @@ function printError() {
   echo '</body></html>';
 }
 
+function expandLinks($post_html) {
+  // This regex is far from bulletproof but it only has to handle ADN API output
+  $href_regex = "/<a\s[^>]*href=\"([^\"]*)\"[^>]*>(.*)<\/a>/siU";
+  if (preg_match_all($href_regex, $post_html, $matches, PREG_PATTERN_ORDER)) {
+    $hrefs = array_unique($matches[1]); // avoid duplicate curl'ing
+    foreach ($hrefs as $href) {
+      $post_html = str_replace($href, unshorten($href), $post_html);
+    }
+  }
+  return $post_html;
+}
+
+function unshorten($url) {
+  $ch = curl_init();
+  // see http://www.php.net/manual/en/function.curl-setopt.php
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($ch, CURLOPT_HEADER, true);
+  curl_setopt($ch, CURLOPT_NOBODY, true);
+  curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); 
+  curl_setopt($ch, CURLOPT_MAXREDIRS, 4); // completely arbitrary
+  curl_setopt($ch, CURLOPT_URL, $url);
+  $curl_response = curl_exec($ch);
+  curl_close($ch);
+
+  // find the last Location header in the curl output
+  // or, if no Location header is found, return the original url
+  $headers = explode("\n", $curl_response);
+  foreach ($headers as $header) {
+    $bits = explode(": ", $header);
+    if ($bits[0] == "Location") $url = $bits[1];
+  }
+  return $url;
+}
 ?>
