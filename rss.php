@@ -5,13 +5,15 @@ require_once 'config.php';
 if (array_key_exists('token', $_GET)
    || array_key_exists('user', $_GET)
    || array_key_exists('global', $_GET)
-   || array_key_exists('channel', $_GET)) {
+   || array_key_exists('channel', $_GET)
+   || array_key_exists('mention', $_GET)) {
   printRss();
 } else {
   printError();
 }
 
 function printRss() {
+  global $clientId, $clientSecret;
   $app = new AppDotNet($clientId,$clientSecret);
 
   if (array_key_exists('token', $_GET)) {
@@ -32,6 +34,10 @@ function printRss() {
   if (array_key_exists('expandlinks', $_GET)) {
     $expandlinks = intval($_GET['expandlinks']);
   }  
+  $lang = '';
+  if (array_key_exists('lang', $_GET)) {
+    $lang = $_GET['lang'];
+  }
   header('Content-Type: application/rss+xml');
   echo '<?xml version="1.0" encoding="utf-8"?>';
   echo '<rss xmlns:atom="http://www.w3.org/2005/Atom" xmlns:geo="http://www.w3.org/2003/01/geo/wgs84_pos#" xmlns:georss="http://www.georss.org/georss" version="2.0">';
@@ -43,6 +49,10 @@ function printRss() {
     $params['include_directed_posts'] = 1;
   } else {
     $params['include_directed_posts'] = 0;
+  }
+  if ($lang == '') {
+  } else {
+    $params['include_annotations'] = 1;
   }
   if (array_key_exists('user', $_GET)) {
     $user = $_GET['user'];
@@ -60,6 +70,12 @@ function printRss() {
     echo '<title>Stream for channel ' . $_GET['channel'] . '</title>';
     echo '<link>http://blog-app.net/#' . $_GET['channel'] . '</link>';
     echo '<description>Posts on app.net</description>';    
+  } elseif (array_key_exists('mention', $_GET)) {
+    $user = $_GET['mention'];
+    $streamData = $app->getUserMentions($user, $params);
+    echo '<title>Mentions for user ' . $user . ' - App.net</title>';
+    echo '<link>http://jonathonduerig.com/my-rss-stream/</link>';
+    echo '<description>Posts mentioning user ' . $user . '</description>';
   } else {
     $streamData = $app->getUserStream($params);
     echo '<title>My Stream - App.net</title>';
@@ -73,7 +89,12 @@ function printRss() {
 
   $stream = $streamData;
   foreach($stream as $post) {
-    if ($replies == 1 || ! array_key_exists('reply_to', $post)) {
+    if (array_key_exists('repost_of', $post)) {
+      $post = $post['repost_of'];
+    }
+    $postLang = getLanguage($post);
+    if (($replies == 1 || ! array_key_exists('reply_to', $post)) &&
+        ($lang == '' || $lang == $postLang)) {
       $username = htmlspecialchars($post['user']['username']);
       $text = htmlspecialchars($post['text']);
       if ($expandlinks == 1) {
@@ -85,7 +106,9 @@ function printRss() {
                                       strtotime($post['created_at'])));
       $link = htmlspecialchars($post['canonical_url']);
       echo '<item>';
-      if (array_key_exists('user', $_GET)) {
+      if (array_key_exists('user', $_GET) &&
+          ($post['user']['id'] == $_GET['user'] ||
+           ('@' . $post['user']['username']) == $_GET['user'])) {
         echo '<title>' . $text . '</title>';
       } else {
         echo '<title>' . $username . ': ' . $text . '</title>';
@@ -103,6 +126,18 @@ function printRss() {
   }
   echo '</channel>';
   echo '</rss>';
+}
+
+function getLanguage($post) {
+  $result = '';
+  if (array_key_exists('annotations', $post)) {
+    foreach ($post['annotations'] as $note) {
+      if ($note['type'] == 'net.app.core.language') {
+        $result = $note['value']['language'];
+      }
+    }
+  }
+  return $result;
 }
 
 function printError() {

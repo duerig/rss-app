@@ -18,7 +18,7 @@ $url = $app->getAuthUrl($redirectUri,$scope);
         href="https://s3.amazonaws.com/lib-storage/bootstrap/css/bootstrap.min.css">
   <link rel="stylesheet" style="text/css"
         href="https://s3.amazonaws.com/lib-storage/bootstrap/css/bootstrap-responsive.min.css">
-  <script src="https://s3.amazonaws.com/lib-storage/bootstrap/css/bootstrap.min.css"></script>
+<!--  <script src="https://s3.amazonaws.com/lib-storage/bootstrap/js/bootstrap.min.js"></script> -->
 </head>
 <body>
   <div class="container">
